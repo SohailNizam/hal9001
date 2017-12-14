@@ -28,7 +28,10 @@ lambda_seq <- function(lambda_max, lambda_min_ratio = 0.01, nlambda = 100) {
 lassi <- function(x, y, lambdas = NULL, nlambda = 100,
                   lambda_min_ratio = 0.01) {
   # setup
-  xscale <- get_xscale(x)
+  # xscale <- get_xscale(x)
+  xcenter <- get_pnz(x)
+  xscale <- sqrt(xcenter)
+  xscale[xscale==0]=min(xscale[xscale!=0])
   ybar <- mean(y)
   resid <- y - ybar
 
@@ -36,39 +39,56 @@ lassi <- function(x, y, lambdas = NULL, nlambda = 100,
   beta <- rep(0, ncol(x))
   beta_mat <- matrix(0, nrow = length(beta), ncol = nlambda)
 
+  
   # lambdas
   if (is.null(lambdas)) {
-    lambda_max <- find_lambda_max(X = x, y = resid, xscale = xscale)
+    lambda_max <- find_lambda_max(x, resid, xscale, xcenter)
     lambdas <- lambda_seq(lambda_max = lambda_max,
                           lambda_min_ratio = lambda_min_ratio,
                           nlambda = nlambda)
+  } else {
+    nlambda <- length(lambdas)
   }
 
+  # intercept
+  intercept <- rep(0, nlambda)
+  
   # fit the lasso with the sequence of lambdas
   for (lambda_step in seq_along(lambdas)) {
     # just the particular lambda we're fitting on
     lambda <- lambdas[lambda_step]
 
-    # fit the lasso model with only "active set" features
-    active_steps <- lassi_fit_cd(X = x, resids = resid, beta = beta,
-                                 lambda = lambda, nsteps = 1000,
-                                 xscale = xscale, active_set = TRUE)
-
     # fit the lasso model with the full set of features
     full_steps <- lassi_fit_cd(X = x, resids = resid, beta = beta,
-                               lambda = lambda, nsteps = 1000, xscale = xscale,
-                               active_set = FALSE)
+                               lambda = lambda, nsteps = 1, xscale = xscale, xcenter = xcenter,
+                               intercept=ybar, active_set = FALSE)
+    # full_steps <- 0
+    active_steps <- 0
+    if(full_steps > 0){
+      # fit the lasso model with only "active set" features
+      active_steps <- lassi_fit_cd(X = x, resids = resid, beta = beta,
+                                   lambda = lambda, nsteps = 1000,
+                                   xscale = xscale, xcenter = xcenter,
+                                   intercept=ybar, active_set = TRUE)
+      # print(mean(resid^2))
+    }
 
     # assign the beta for each given lambda step
     beta_mat[, lambda_step] <- beta
+    intercept[lambda_step] <- ybar[1]
   }
 
-  # appropriate scaling betas is supposed to help
-  beta_mat <- diag(1 / xscale) %*% beta_mat
-
   # create output object
-  out <- list(beta_mat, lambdas)
-  names(out) <- c("beta_mat", "lambdas")
+  out <- list(beta_mat, lambdas, intercept)
+  names(out) <- c("beta_mat", "lambdas", "intercept")
+  class(out) <- "lassi"
   return(out)
 }
 
+predict.lassi <- function(fit, x){
+  pred_mat <- x %*% fit$beta_mat
+  #correct for intercepts
+  pred_mat <- sweep(pred_mat, 2, fit$intercept, "+")
+  
+  return(pred_mat)
+}

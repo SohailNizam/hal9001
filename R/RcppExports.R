@@ -43,6 +43,11 @@ soft_threshold <- function(beta, lambda) {
     .Call('_hal9001_soft_threshold', PACKAGE = 'hal9001', beta, lambda)
 }
 
+#' compute $X'r$ for a given column of X
+X_t_resid <- function(X, resids, j, xscale_j, xcenter_j) {
+    .Call('_hal9001_X_t_resid', PACKAGE = 'hal9001', X, resids, j, xscale_j, xcenter_j)
+}
+
 #' Compute updated LASSO coefficients
 #'
 #' @param X ...
@@ -51,8 +56,8 @@ soft_threshold <- function(beta, lambda) {
 #' @param beta_j ...
 #' @param xscale_j ...
 #'
-get_new_beta <- function(X, resids, j, beta_j, xscale_j) {
-    .Call('_hal9001_get_new_beta', PACKAGE = 'hal9001', X, resids, j, beta_j, xscale_j)
+get_new_beta <- function(X, resids, j, beta_j, scale_j, center_j) {
+    .Call('_hal9001_get_new_beta', PACKAGE = 'hal9001', X, resids, j, beta_j, scale_j, center_j)
 }
 
 #' Find maximum L1 regularization constant
@@ -61,16 +66,16 @@ get_new_beta <- function(X, resids, j, beta_j, xscale_j) {
 #' @param y ...
 #' @param xscale ...
 #'
-find_lambda_max <- function(X, y, xscale) {
-    .Call('_hal9001_find_lambda_max', PACKAGE = 'hal9001', X, y, xscale)
+find_lambda_max <- function(X, resids, xscale, xcenter) {
+    .Call('_hal9001_find_lambda_max', PACKAGE = 'hal9001', X, resids, xscale, xcenter)
 }
 
 equal_double <- function(x, y) {
     .Call('_hal9001_equal_double', PACKAGE = 'hal9001', x, y)
 }
 
-update_coord <- function(X, resids, beta, lambda, j, xscale) {
-    .Call('_hal9001_update_coord', PACKAGE = 'hal9001', X, resids, beta, lambda, j, xscale)
+update_coord <- function(X, resids, beta, lambda, j, xscale, xcenter, rss, rsum) {
+    invisible(.Call('_hal9001_update_coord', PACKAGE = 'hal9001', X, resids, beta, lambda, j, xscale, xcenter, rss, rsum))
 }
 
 #' Fit a LASSO Regression Model
@@ -87,8 +92,8 @@ update_coord <- function(X, resids, beta, lambda, j, xscale) {
 #' @param active_set, update only nonzero coefficients (TRUE), or all
 #'  coefficients (FALSE)
 #'
-lassi_fit_cd <- function(X, resids, beta, lambda, nsteps, xscale, active_set) {
-    .Call('_hal9001_lassi_fit_cd', PACKAGE = 'hal9001', X, resids, beta, lambda, nsteps, xscale, active_set)
+lassi_fit_cd <- function(X, resids, beta, lambda, nsteps, xscale, xcenter, intercept, active_set) {
+    .Call('_hal9001_lassi_fit_cd', PACKAGE = 'hal9001', X, resids, beta, lambda, nsteps, xscale, xcenter, intercept, active_set)
 }
 
 non_zeros <- function(X) {

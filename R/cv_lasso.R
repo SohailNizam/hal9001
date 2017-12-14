@@ -15,27 +15,20 @@
 #'
 #' @importFrom origami training validation
 #
-lassi_origami <- function(fold, data, lambdas) {
-  # make sure data is an (augmented) sparse matrix of basis functions
-  stopifnot(class(data) == "dgCMatrix")
+lassi_origami <- function(fold, x_basis, y, lambdas) {
 
   # split data for V-fold cross-validation
-  train_data <- origami::training(data)
-  valid_data <- origami::validation(data)
+  train_x <- origami::training(x_basis)
+  valid_x <- origami::validation(x_basis)
+  train_y <- origami::training(y)
+  valid_y <- origami::validation(y)
 
-  # wrangle objects to clearer forms
-  train_x_basis <- train_data[, -1]
-  valid_x_basis <- valid_data[, -1]
-  train_y <- train_data[, 1]
-  valid_y <- valid_data[, 1]
+  # compute the predicted betas for the given training sets
+  lassi_fit <- lassi(x = train_x, y = train_y, lambdas = lambdas)
+  pred_mat <- valid_x %*% lassi_fit$beta_mat + lassi_fit$intercept
 
-  # compute the predicted betas for the given training and validation sets
-  lassi_fit <- lassi(x = train_x_basis, y = train_y, lambdas = lambdas)
-  pred_mat <- valid_x_basis %*% lassi_fit$beta_mat
-
-  # compute the MSE for the given training and validation sets
-  ybar_train <- mean(train_y)
-  mses <- apply(pred_mat, 2, function(preds) {mean((preds + ybar_train -
+  # compute the MSE for the given validation sets
+  mses <- apply(pred_mat, 2, function(preds) {mean((preds -
                                                     valid_y)^2)})
 
   # the only output needed is the lambda-wise MSE over each fold
@@ -70,13 +63,13 @@ cv_lasso <- function(x_basis, y, n_lambda = 100, n_folds = 10) {
   lambdas_init <- lasso_init$lambdas
 
   # next, set up a cross-validated lasso using the sequence of lambdas
-  full_data_mat <- cbind(y, x_basis)
-  folds <- origami::make_folds(full_data_mat, V = n_folds)
+  folds <- origami::make_folds(y, V = n_folds)
 
   # run the cross-validated lasso procedure to find the optimal lambda
   cv_lasso_out <- origami::cross_validate(cv_fun = lassi_origami,
                                           folds = folds,
-                                          data = full_data_mat,
+                                          x_basis = x_basis,
+                                          y = y,
                                           lambdas = lambdas_init)
 
   # compute cv-mean of MSEs for each lambda

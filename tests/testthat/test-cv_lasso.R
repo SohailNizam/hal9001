@@ -42,40 +42,11 @@ lambdas_init <- lasso_init$lambdas
 full_data_mat <- cbind(y, x_basis)
 folds <- origami::make_folds(full_data_mat, V = n_folds)
 
-# origami cvfun for cross-validating the lasso fits
-lassi_origami <- function(fold, data, lambdas) {
-  # split data for V-fold cross-validation
-  train_data <- origami::training(data)
-  valid_data <- origami::validation(data)
-
-  # extract matrices of basis function from training and validation for X
-  train_x_basis <- train_data[, -1]
-  valid_x_basis <- valid_data[, -1]
-
-  # extract vector of outcomes from training and validation for Y
-  train_y <- train_data[, 1]
-  valid_y <- valid_data[, 1]
-
-  # compute the predicted betas for the given training and validation sets
-  lassi_fit <- hal9001:::lassi(x = train_x_basis, y = train_y,
-                               lambdas = lambdas)
-  pred_mat <- valid_x_basis %*% lassi_fit$beta_mat
-
-  # compute the MSE for the given training and validation sets
-  ybar_train <- mean(train_y)
-  mses <- apply(pred_mat, 2, function(preds) {mean((preds + ybar_train -
-                                                    valid_y)^2)})
-
-  # the only output needed is the lambda-wise MSE over each fold
-  mses_out <- matrix(mses, nrow = 1)
-  out <- list(mses = mses_out)
-  return(out)
-}
-
 # run the cross-validated lasso procedure to find the optimal lambda
 cv_lasso_out <- origami::cross_validate(cv_fun = lassi_origami,
                                         folds = folds,
-                                        data = full_data_mat,
+                                        x_basis = x_basis,
+                                        y = y,
                                         lambdas = lambdas_init)
 
 # compute cv-mean of MSEs for each lambda
@@ -116,6 +87,24 @@ lambda_1se_cvglmnet <- lasso_glmnet$lambda.1se
 coef_minmse_cvglmnet <- coef(lasso_glmnet, "lambda.min")
 coef_1se_cvglmnet <- coef(lasso_glmnet, "lambda.1se")
 betas_cvglmnet <- cbind(coef_1se_cvglmnet, coef_minmse_cvglmnet)
+
+microbenchmark({
+  lassi_fit <- lassi(x_basis, y, nlambda=100, lambda_min_ratio = 0.01)
+},{
+  glmnet_fit <- glmnet::glmnet(x = x_basis, y = y, intercept = TRUE, nlambda = 100,
+                 lambda.min.ratio = 0.01, family = "gaussian", alpha = 1)
+},{
+  cv_lasso(x_basis, y)
+},{
+  glmnet::cv.glmnet(x = x_basis, y = y, nfolds = n_folds,
+                    foldid = fold_id)
+}, times = 1)
+
+Rprof(tmp <- tempfile())
+cv_lasso(x_basis, y)
+Rprof()
+summaryRprof(tmp)
+unlink(tmp)
 
 
 ################################################################################
