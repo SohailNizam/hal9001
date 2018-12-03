@@ -1,5 +1,5 @@
 #' HAL: The Highly Adaptive LASSO estimator
-#'
+#' I edited this filE!!!!
 #' Estimation procedure for HAL, the Highly Adaptive LASSO
 #'
 #' @details The procedure uses a custom C++ implementation to generate a design
