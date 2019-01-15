@@ -57,7 +57,8 @@ fit_hal <- function(X,
                     return_lasso = FALSE,
                     basis_list = NULL,
                     ...,
-                    yolo = TRUE) {
+                    yolo = TRUE,
+                    elim_dups = TRUE) {
 
   # check arguments and catch function call
   call <- match.call(expand.dots = TRUE)
@@ -88,10 +89,14 @@ fit_hal <- function(X,
   x_basis <- make_design_matrix(X, basis_list)
   time_design_matrix <- proc.time()
 
-  # catalog and eliminate duplicates
-  copy_map <- make_copy_map(x_basis)
-  unique_columns <- as.numeric(names(copy_map))
-  x_basis <- x_basis[, unique_columns]
+ # catalog and (if elim_dups == TRUE) eliminate duplicates
+  
+  if(elim_dups == TRUE){
+    copy_map <- make_copy_map(x_basis)
+    unique_columns <- as.numeric(names(copy_map))
+    x_basis <- x_basis[, unique_columns]
+
+  }
 
   # bookkeeping: get end time of duplicate removal procedure
   time_rm_duplicates <- proc.time()
