@@ -154,7 +154,8 @@ fit_hal <- function(X,
     times = times,
     lambda_star = lambda_star,
     family = family,
-    hal_lasso = NULL
+    hal_lasso = NULL,
+    num_col = ncol(x_basis)
   )
   if (return_lasso) {
     fit$hal_lasso <- hal_lasso
