@@ -91,8 +91,9 @@ fit_hal <- function(X,
 
  # catalog and (if elim_dups == TRUE) eliminate duplicates
   
+  copy_map <- make_copy_map(x_basis) #outside if statement so copy_map still created if we don't eliminate duplicates
+  
   if(elim_dups == TRUE){
-    copy_map <- make_copy_map(x_basis)
     unique_columns <- as.numeric(names(copy_map))
     x_basis <- x_basis[, unique_columns]
 
