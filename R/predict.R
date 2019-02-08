@@ -29,8 +29,11 @@ predict.hal9001 <- function(object,
   pred_x_basis <- make_design_matrix(new_data, object$basis_list)
   group <- object$copy_map[[1]]
 
-  # reduce matrix of basis functions
-  pred_x_basis <- apply_copy_map(pred_x_basis, object$copy_map)
+  # reduce matrix of basis functions if duplicates were eliminated during fit
+  if (object$elim_dups) {
+    pred_x_basis <- apply_copy_map(pred_x_basis, object$copy_map)
+    }
+  
 
   # generate predictions
   preds <- as.vector(Matrix::tcrossprod(
